@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Snake Game</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <div class="game-container" id="app-container">
+      <!-- Top Header Display: Core Stats -->
+      <header class="game-header" id="score-header">
+        <div class="title-section" id="brand-header" style="display: flex; align-items: center; gap: 12px;">
+          <h1>SNAKE <span>GAME</span></h1>
+          <button id="btn-toggle-sound" class="btn-sound-toggle" aria-label="Desativar Som" style="background: none; border: none; color: var(--color-primary); cursor: pointer; padding: 4px; display: flex; align-items: center; justify-content: center; opacity: 0.8; transition: opacity 0.2s, transform 0.2s; outline: none;" onmouseover="this.style.opacity='1'; this.style.transform='scale(1.1)'" onmouseout="this.style.opacity='0.8'; this.style.transform='scale(1)'">
+            <svg id="sound-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 0 4px var(--color-primary-glow));">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+            </svg>
+          </button>
+        </div>
+        <div class="score-board" id="score-stats-board">
+          <div class="score-box" id="current-score-box">
+            <span class="score-label">Pontos</span>
+            <span class="score-value" id="current-score">000</span>
+          </div>
+          <div class="score-box" id="high-score-box">
+            <span class="score-label">Recorde</span>
+            <span class="score-value" id="high-score">000</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- Status da Fase Atual (Sempre visível acima do tabuleiro quando ativo) -->
+      <div class="level-status-bar hidden" id="game-status-bar">
+        <div class="status-segment">
+          <span class="status-lbl">MODO</span>
+          <span class="status-val-highlight text-uppercase" id="mode-badge">CAMPANHA</span>
+        </div>
+        <div class="status-segment grow">
+  <span class="status-lbl">FASE SELECIONADA</span>
+  <span class="status-val font-sans" id="phase-title">01 - Clássico Neon</span>
+</div>
+        <div class="status-segment align-end">
+          <span class="status-lbl">META DA FASE</span>
+          <span class="status-val-highlight-orange" id="target-progress">0 / 5</span>
+        </div>
+      </div>
+
+      <!-- Central Game Canvas and Overlay Systems -->
+      <main class="canvas-wrapper" id="game-arena">
+        <canvas id="game-canvas" width="400" height="400"></canvas>
+
+        <!-- Start Game Screen Overlay (Nova versão com modos de jogo) -->
+        <div class="screen-overlay start-screen hidden" id="start-overlay">
+          <div class="menu-content">
+            <h2 class="menu-title">SNAKE <span class="highlight">GAME</span></h2>
+            <p class="menu-subtitle">Escolha como deseja jogar.</p>
+            <div class="menu-actions">
+              <div class="menu-action-group">
+                <button class="btn-primary" id="btn-campaign" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.886H3.885l4.912 3.57L6.885 19 12 15.43 17.115 19l-1.912-5.744 4.912-3.57h-6.203L12 3z"/></svg>
+                  Jogar Fases
+                </button>
+                <div class="menu-helper-text">Comece na fase 1 e avance até a fase 20.</div>
+              </div>
+
+              <div class="menu-action-group">
+                <button class="btn-secondary" id="btn-show-levels" style="width: 100%; border-color: var(--color-primary); color: #10b981; display: flex; align-items: center; justify-content: center; gap: 8px; margin: 0;">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+                  Escolher Fase
+                </button>
+                <div class="menu-helper-text">Jogue qualquer fase direto.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Level Selection Screen Overlay -->
+        <div class="screen-overlay selector-screen hidden" id="level-select-overlay">
+          <div class="overlay-header">
+            <h2>ESCOLHER <span class="highlight">FASE</span></h2>
+            <p style="margin-bottom: 12px; font-size: 0.8rem;">Selecione qualquer nível para jogar na modalidade avulsa:</p>
+          </div>
+          <div class="levels-container-scroll">
+            <div class="level-grid" id="level-grid">
+              <!-- Gerado dinamicamente via JS -->
+            </div>
+          </div>
+          <button class="btn-secondary" id="btn-back-to-menu-overlay" style="margin-top: 12px; padding: 8px 16px; font-size: 0.8rem;">
+            Voltar ao Menu
+          </button>
+        </div>
+
+        <!-- Level Completed Screen Overlay -->
+        <div class="screen-overlay completed-screen hidden" id="level-completed-overlay">
+          <div class="badge-completed">✓ CONCLUÍDA!</div>
+          <h2 id="completed-title" style="color: var(--color-primary); text-shadow: 0 0 10px var(--color-primary-glow);">FASE 01 COMPLETADA!</h2>
+          <p id="completed-desc" style="font-size: 0.85rem; margin-bottom: 16px;">Você atingiu o objetivo de energia com sucesso.</p>
+          
+          <div class="summary-stats">
+            <div class="summary-row">
+              <span class="summary-label">Pontos Acumulados:</span>
+              <span class="summary-val highlight-val" id="completed-score">120</span>
+            </div>
+            <div class="summary-row">
+              <span class="summary-label" id="completed-next-target-label">Próxima Meta:</span>
+              <span class="summary-val" id="completed-next-target">7 Comidas</span>
+            </div>
+          </div>
+          
+          <div class="completed-actions-stack" style="display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 240px; margin-top: 12px;">
+            <button class="btn-primary" id="btn-next-level" style="width: 100%; justify-content: center;">
+              Próxima Fase
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            </button>
+            <button class="btn-secondary" id="btn-replay-level" style="width: 100%; justify-content: center; margin: 0;">
+              Jogar Novamente
+            </button>
+            <button class="btn-secondary" id="btn-select-different-level" style="width: 100%; justify-content: center; margin: 0;">
+              Selecionar Outra Fase
+            </button>
+          </div>
+        </div>
+
+        <!-- Final Campaign Victory Overlay -->
+        <div class="screen-overlay victory-screen hidden" id="victory-overlay">
+          <div class="cup-icon" style="font-size: 3rem; margin-bottom: 8px; animation: bounce 1.5s infinite alternate;">👑</div>
+          <h2 style="color: #fbbf24; text-shadow: 0 0 15px rgba(251, 191, 36, 0.45); font-size: 1.8rem;">VITÓRIA SUPREMA!</h2>
+          <p style="font-size: 0.8rem; line-height: 1.4; margin-bottom: 16px; max-width: 320px;">
+            Espetacular! Você provou suas habilidades e completou as 20 fases do TP LAB no Modo Campanha!
+          </p>
+          
+          <div class="summary-stats" style="width: 100%; max-width: 260px; margin-bottom: 16px;">
+            <div class="summary-row">
+              <span class="summary-label">Score Acumulado:</span>
+              <span class="summary-val highlight-val" id="victory-score">0</span>
+            </div>
+            <div class="summary-row">
+              <span class="summary-label">Maior Recorde:</span>
+              <span class="summary-val" id="victory-high-score">0</span>
+            </div>
+          </div>
+          
+          <div class="completed-actions-stack" style="display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 240px;">
+            <button class="btn-primary" id="btn-victory-restart" style="width: 100%; justify-content: center; background-color: #fbbf24; color: #1e1b4b; box-shadow: 0 4px 15px rgba(251, 191, 36, 0.45);">
+              Reiniciar Campanha (Fase 1)
+            </button>
+            <button class="btn-secondary" id="btn-victory-selector" style="width: 100%; justify-content: center; margin: 0;">
+              Escolher Outra Fase
+            </button>
+          </div>
+        </div>
+
+        <!-- Game Over Screen Overlay -->
+        <div class="screen-overlay game-over-screen hidden" id="gameover-overlay">
+          <h2>GAME OVER</h2>
+          <p>Você colidiu e a jornada chegou ao fim nesta fase!</p>
+          <div class="summary-stats" id="stats-summary">
+            <div class="summary-row">
+              <span class="summary-label">Pontos da Partida:</span>
+              <span class="summary-val highlight-val" id="final-score">0</span>
+            </div>
+            <div class="summary-row">
+              <span class="summary-label">Maior Pontuação:</span>
+              <span class="summary-val" id="final-high-score">0</span>
+            </div>
+          </div>
+          <div class="gameover-actions-stack" style="display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 240px; margin-top: 12px;">
+            <button class="btn-primary btn-food" id="btn-restart" style="width: 100%; justify-content: center; display: flex; align-items: center; gap: 8px; margin: 0;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+              Tentar Novamente
+            </button>
+            <button class="btn-secondary" id="btn-gameover-menu" style="width: 100%; justify-content: center; display: flex; align-items: center; gap: 8px; margin: 0; border-color: rgba(255,255,255,0.15); color: rgba(255,255,255,0.8);">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+              Voltar ao Menu
+            </button>
+          </div>
+        </div>
+      </main>
+
+      <!-- Mid Controls: Pause and Action Row -->
+      <div class="game-controls-bar" id="game-actions">
+        <button class="btn-secondary" id="btn-pause" disabled>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="pause-icon"><rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/></svg>
+          <span id="pause-text">Pausar</span>
+        </button>
+        <button class="btn-secondary" id="btn-restart-current-only">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+          Reiniciar
+        </button>
+        <button class="btn-secondary" id="btn-select-fase-footer">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+          Fases
+        </button>
+        <button class="btn-secondary" id="btn-menu">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+          Menu
+        </button>
+      </div>
+
+      <!-- Instructions Display Panel (Desktop) -->
+      <div class="instructions-box" id="info-box">
+        Use as setas <span class="keys"><span class="key-cap">▲</span><span class="key-cap">▼</span><span class="key-cap">◀</span><span class="key-cap">▶</span></span> ou as teclas <span class="keys"><span class="key-cap">W</span><span class="key-cap">A</span><span class="key-cap">S</span><span class="key-cap">D</span></span> do teclado para direcionar a cobrinha. Pressione <span class="keys"><span class="key-cap">Espaço</span></span> para pausar.
+      </div>
+
+      <!-- Touch Action Controls (Mobile D-pad overlay) -->
+      <nav class="mobile-controls" id="touch-dpad">
+        <div class="mobile-row">
+          <button class="touch-btn" id="ctrl-up" aria-label="Mover para cima">▲</button>
+        </div>
+        <div class="mobile-row">
+          <button class="touch-btn" id="ctrl-left" aria-label="Mover para a esquerda">◀</button>
+          <button class="touch-btn" id="ctrl-down" aria-label="Mover para baixo">▼</button>
+          <button class="touch-btn" id="ctrl-right" aria-label="Mover para a direita">▶</button>
+        </div>
+      </nav>
+
+
+    </div>
+
+    <!-- Bloqueador de Orientação para telas horizontais de aparelhos touch -->
+    <div id="orientation-blocker" class="orientation-blocker hidden">
+      <div class="blocker-content">
+        <div class="phone-icon-animation">
+          <svg class="phone-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="5" y="2" width="14" height="20" rx="2.5" ry="2.5"/>
+            <circle cx="12" cy="18" r="1"/>
+          </svg>
+          <svg class="arrow-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+          </svg>
+        </div>
+        <h2>Gire seu dispositivo</h2>
+        <p>Este jogo foi pensado para uma experiência mais fluida no modo vertical.</p>
+        <p class="blocker-sub">Volte para a posição vertical para continuar jogando.</p>
+      </div>
+    </div>
+
+    <!-- Main Game Script Entry point -->
+    <script type="module" src="/script.js"></script>
+  </body>
+</html>

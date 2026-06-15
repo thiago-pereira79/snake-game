@@ -1,0 +1,6 @@
+{
+  "name": "Snake Game",
+  "description": "Um jogo clássico da cobrinha moderno, minimalista e responsivo, construído com HTML, CSS e JavaScript puro.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
