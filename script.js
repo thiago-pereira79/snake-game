@@ -311,12 +311,22 @@ let speedBoostTimer = 0; // Buff de supervelocidade restante (frames de jogo)
 let reductionSplashTimer = 0; // Efeito estético de reduzir tamanho
 
 // Controle do loop de animação de alta precisão
-let lastLogicTime = 0;
+const MAX_FRAME_DELTA = 250;
+const MAX_LOGIC_STEPS_PER_FRAME = 3;
+let lastFrameTime = 0;
+let logicAccumulator = 0;
 let animationFrameId = null;
 
 // Matrizes visuais extras
 let particles = [];
 let foodPulseAngle = 0;
+let scoreWobbleTimeoutId = null;
+let activeLevel = levels[currentLevelIndex];
+let activeTheme = getCurrentTheme(activeLevel);
+const snakeGradientCache = {
+  key: '',
+  colors: []
+};
 
 // --- SISTEMAS DE ÁUDIO (WEB AUDIO API) ---
 let audioCtx = null;
@@ -860,6 +870,54 @@ function cleanLoopsAndOverlays() {
     cancelAnimationFrame(animationFrameId);
     animationFrameId = null;
   }
+  resetLoopTiming();
+}
+
+function resetLoopTiming(now = performance.now()) {
+  lastFrameTime = now;
+  logicAccumulator = 0;
+}
+
+function startGameLoop() {
+  if (animationFrameId) return;
+
+  const now = performance.now();
+  resetLoopTiming(now);
+  drawLoop(now);
+}
+
+function getActiveLogicInterval() {
+  if (speedBoostTimer > 0) {
+    return Math.max(45, Math.floor(baseGameSpeed * 0.55));
+  }
+
+  return baseGameSpeed;
+}
+
+function refreshActiveLevelCache() {
+  activeLevel = levels[currentLevelIndex] || levels[0];
+  activeTheme = getCurrentTheme(activeLevel);
+  snakeGradientCache.key = '';
+  snakeGradientCache.colors.length = 0;
+}
+
+function getSnakeSegmentColors(headColor, bodyColor, isBoosted) {
+  const startColor = isBoosted ? '#06b6d4' : headColor;
+  const endColor = isBoosted ? '#0891b2' : bodyColor;
+  const cacheKey = `${snake.length}|${startColor}|${endColor}`;
+
+  if (snakeGradientCache.key !== cacheKey) {
+    snakeGradientCache.key = cacheKey;
+    snakeGradientCache.colors.length = snake.length;
+
+    for (let i = 0; i < snake.length; i++) {
+      snakeGradientCache.colors[i] = i === 0
+        ? startColor
+        : blendColors(startColor, endColor, i / snake.length);
+    }
+  }
+
+  return snakeGradientCache.colors;
 }
 
 // Configura botões direcionais virtuais e eventos de swipe no tabuleiro/canvas
@@ -1075,8 +1133,7 @@ function transitionTo(newState) {
 
     // Inicia Loop de Frames se estiver desligado
     if (!animationFrameId) {
-      lastLogicTime = performance.now();
-      drawLoop(performance.now());
+      startGameLoop();
     }
   } 
   else if (newState === STATES.PAUSED) {
@@ -1087,8 +1144,7 @@ function transitionTo(newState) {
 
     // Inicia Loop de Frames se estiver desligado para atualizar o canvas estático
     if (!animationFrameId) {
-      lastLogicTime = performance.now();
-      drawLoop(performance.now());
+      startGameLoop();
     }
   }
   else if (newState === STATES.LEVEL_SELECT) {
@@ -1233,7 +1289,8 @@ function findSafeSpawn(lvl, length) {
 
 // Inicializa variáveis baseadas nas configurações da fase ativa
 function loadCurrentLevel() {
-  const lvl = levels[currentLevelIndex];
+  refreshActiveLevelCache();
+  const lvl = activeLevel;
 
   // Configuração visual do status bar superior
   modeBadge.textContent = isCampaignMode ? "CAMPANHA" : "AVULSO";
@@ -1315,10 +1372,12 @@ function advanceToNextLevel() {
 function togglePause() {
   if (gameState === STATES.PLAYING) {
     gameState = STATES.PAUSED;
+    resetLoopTiming();
     pauseText.textContent = 'Continuar';
     btnPause.querySelector('svg').innerHTML = '<polygon points="6 3 20 12 6 21 6 3"/>';
   } else if (gameState === STATES.PAUSED) {
     gameState = STATES.PLAYING;
+    resetLoopTiming();
     pauseText.textContent = 'Pausar';
     btnPause.querySelector('svg').innerHTML = '<rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1" />';
   }
@@ -1370,7 +1429,7 @@ function handleKeyDown(e) {
 // --- MECÂNICA DE COMIDAS E SPAWN INTELIGENTE ---
 
 function spawnFood() {
-  const lvl = levels[currentLevelIndex];
+  const lvl = activeLevel;
   
   // Decide o tipo de comida baseado na fase config
   // As fases com múltiplas comidas permitidas habilitam types dinâmicos
@@ -1428,10 +1487,10 @@ function spawnFood() {
 // --- LOOP DE LÓGICA DO JOGO ---
 
 function gameLogicStep() {
-  const lvl = levels[currentLevelIndex];
+  const lvl = activeLevel;
 
   // Consome próxima direção
-  direction = { ...nextDirection };
+  direction = nextDirection;
 
   // Avanço da cabeça calculada
   const head = snake[0];
@@ -1576,22 +1635,33 @@ function createExplosion(x, y, colorStr) {
 }
 
 function updateParticles() {
-  for (let i = particles.length - 1; i >= 0; i--) {
+  let writeIndex = 0;
+
+  for (let i = 0; i < particles.length; i++) {
     const p = particles[i];
     p.x += p.vx;
     p.y += p.vy;
     p.alpha -= p.decay;
 
-    if (p.alpha <= 0) {
-      particles.splice(i, 1);
+    if (p.alpha > 0) {
+      particles[writeIndex] = p;
+      writeIndex++;
     }
   }
+
+  particles.length = writeIndex;
 }
 
 function triggerScoreWobble() {
   currentScoreEl.classList.add('changed');
-  setTimeout(() => {
+
+  if (scoreWobbleTimeoutId) {
+    clearTimeout(scoreWobbleTimeoutId);
+  }
+
+  scoreWobbleTimeoutId = setTimeout(() => {
     currentScoreEl.classList.remove('changed');
+    scoreWobbleTimeoutId = null;
   }, 180);
 }
 
@@ -1600,29 +1670,43 @@ function triggerScoreWobble() {
 function drawLoop(currentTime) {
   if (orientationBlocked) {
     animationFrameId = null;
+    resetLoopTiming(currentTime);
     return;
   }
   if (gameState !== STATES.PLAYING && gameState !== STATES.PAUSED) {
     animationFrameId = null;
+    resetLoopTiming(currentTime);
     return;
   }
 
   animationFrameId = requestAnimationFrame(drawLoop);
 
   if (gameState === STATES.PLAYING) {
-    const elapsed = currentTime - lastLogicTime;
-    
-    // Calcula intervalo de tick levando em conta buffs de super energia
-    let activeInterval = baseGameSpeed;
-    if (speedBoostTimer > 0) {
-      activeInterval = Math.max(45, Math.floor(baseGameSpeed * 0.55)); // Super Momentum!
+    const frameDelta = Math.min(Math.max(currentTime - lastFrameTime, 0), MAX_FRAME_DELTA);
+    logicAccumulator += frameDelta;
+
+    let stepsThisFrame = 0;
+    let activeInterval = getActiveLogicInterval();
+
+    while (
+      logicAccumulator >= activeInterval &&
+      stepsThisFrame < MAX_LOGIC_STEPS_PER_FRAME &&
+      gameState === STATES.PLAYING
+    ) {
+      gameLogicStep();
+      logicAccumulator -= activeInterval;
+      stepsThisFrame++;
+      activeInterval = getActiveLogicInterval();
     }
 
-    if (elapsed >= activeInterval) {
-      gameLogicStep();
-      lastLogicTime = currentTime;
+    if (stepsThisFrame === MAX_LOGIC_STEPS_PER_FRAME && logicAccumulator >= activeInterval) {
+      logicAccumulator = activeInterval;
     }
+  } else {
+    logicAccumulator = 0;
   }
+
+  lastFrameTime = currentTime;
 
   updateParticles();
   renderCanvas();
@@ -1654,7 +1738,7 @@ function renderCanvas() {
  * Desenha o fundo do tabuleiro de jogo utilizando uma cor sólida ou gradientes por tema.
  */
 function drawBoardBackground() {
-  const theme = getCurrentTheme();
+  const theme = activeTheme;
   ctx.fillStyle = theme.backgroundColor || '#090d16';
   ctx.fillRect(0, 0, LOGICAL_SIZE, LOGICAL_SIZE);
 }
@@ -1663,36 +1747,35 @@ function drawBoardBackground() {
  * Desenha a grade virtual do tabuleiro para auxiliar a visibilidade e controle espacial.
  */
 function drawGrid() {
-  const theme = getCurrentTheme();
+  const theme = activeTheme;
+  ctx.save();
   ctx.strokeStyle = theme.gridColor || '#10b981';
   ctx.lineWidth = 0.5;
+  ctx.globalAlpha = 0.08;
+  ctx.beginPath();
   
   for (let i = 0; i <= GRID_SIZE; i++) {
     const coord = i * CELL_SIZE;
 
-    ctx.beginPath();
     ctx.moveTo(coord, 0);
     ctx.lineTo(coord, LOGICAL_SIZE);
     ctx.globalAlpha = 0.08; // Transparência refinada para o grid discreto
-    ctx.stroke();
-
-    ctx.beginPath();
     ctx.moveTo(0, coord);
     ctx.lineTo(LOGICAL_SIZE, coord);
-    ctx.globalAlpha = 0.08;
-    ctx.stroke();
   }
-  ctx.globalAlpha = 1.0;
+
+  ctx.stroke();
+  ctx.restore();
 }
 
 /**
  * Desenha todos os blocos de obstáculos cadastrados na fase atual.
  */
 function drawObstacles() {
-  const lvl = levels[currentLevelIndex];
+  const lvl = activeLevel;
   if (!lvl || !lvl.obstacles) return;
 
-  const theme = getCurrentTheme();
+  const theme = activeTheme;
   const color = theme.obstacleColor || '#f59e0b';
 
   lvl.obstacles.forEach(obs => {
@@ -1732,7 +1815,7 @@ function drawObstacles() {
  * Desenha a iguaria ativa que a cobra deve consumir, pulsando ciclicamente.
  */
 function drawFood() {
-  const theme = getCurrentTheme();
+  const theme = activeTheme;
   foodPulseAngle += 0.08;
   const pulse = 1 + Math.sin(foodPulseAngle) * 0.12;
   const radius = (CELL_SIZE / 2.22) * pulse;
@@ -1780,30 +1863,29 @@ function drawFood() {
  * Renderiza todos os segmentos da cobra com gradientes neon, olhos direcionados e efeitos de buffet.
  */
 function drawSnake() {
-  const theme = getCurrentTheme();
+  const theme = activeTheme;
   ctx.save();
   ctx.globalAlpha = 1.0; // Solidez total contra fundo escuro
 
   const headColor = theme.snakeHeadColor || '#10b981';
   const bodyColor = theme.snakeBodyColor || '#059669';
+  const segmentColors = getSnakeSegmentColors(headColor, bodyColor, speedBoostTimer > 0);
+  const useReductionFlash = reductionSplashTimer > 0 && Math.floor(reductionSplashTimer) % 2 === 0;
 
-  snake.forEach((segment, index) => {
+  for (let index = 0; index < snake.length; index++) {
+    const segment = snake[index];
     const isHead = index === 0;
     const x = segment.x * CELL_SIZE;
     const y = segment.y * CELL_SIZE;
 
-    let segmentColor = bodyColor;
+    const segmentColor = useReductionFlash ? '#a855f7' : segmentColors[index];
 
-    if (isHead) {
-      segmentColor = headColor;
-    } else {
+    if (false) {
       // Cria um gradiente suave da cabeça à cauda usando nosso misturador de cores
-      const ratio = index / snake.length;
-      segmentColor = blendColors(headColor, bodyColor, ratio);
     }
 
     // Adaptador de cor dinâmico caso receba buffs ativos
-    if (speedBoostTimer > 0) {
+    if (false && speedBoostTimer > 0) {
       // Brilho especial de hipermomentum
       if (isHead) {
         segmentColor = '#06b6d4';
@@ -1811,7 +1893,7 @@ function drawSnake() {
         const ratio = index / snake.length;
         segmentColor = blendColors('#06b6d4', '#0891b2', ratio);
       }
-    } else if (reductionSplashTimer > 0 && Math.floor(reductionSplashTimer) % 2 === 0) {
+    } else if (false && reductionSplashTimer > 0 && Math.floor(reductionSplashTimer) % 2 === 0) {
       // Flashing de encolhimento
       segmentColor = '#a855f7';
     }
@@ -1868,7 +1950,7 @@ function drawSnake() {
     }
 
     ctx.restore();
-  });
+  }
 
   ctx.restore();
 
@@ -1881,17 +1963,22 @@ function drawSnake() {
  * Desenha as partículas brilhantes dispersas no Canvas.
  */
 function drawParticles() {
-  particles.forEach(p => {
-    ctx.save();
+  if (particles.length === 0) return;
+
+  ctx.save();
+  ctx.shadowBlur = 6;
+
+  for (let i = 0; i < particles.length; i++) {
+    const p = particles[i];
     ctx.globalAlpha = p.alpha;
     ctx.fillStyle = p.color;
-    ctx.shadowBlur = 6;
     ctx.shadowColor = p.color;
     ctx.beginPath();
     ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
     ctx.fill();
-    ctx.restore();
-  });
+  }
+
+  ctx.restore();
 }
 
 // Utilitário para misturar duas cores Hexadecimais no formato #RRGGBB
@@ -1937,7 +2024,7 @@ function updateHighScoreDisplay() {
 }
 
 function updateTargetProgressDisplay() {
-  const currentTargetValue = levels[currentLevelIndex].target;
+  const currentTargetValue = activeLevel.target;
   targetProgress.textContent = `${levelFoodsEaten} / ${currentTargetValue}`;
 }
 
