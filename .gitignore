@@ -8,6 +8,9 @@ build/
 # Testes / cobertura
 coverage/
 
+# Relatorios e capturas locais de validacao
+mobile-previews/
+
 # Variáveis de ambiente
 .env
 .env.*

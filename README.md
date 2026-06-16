@@ -123,33 +123,17 @@ Essa opção oferece mais liberdade ao jogador e facilita o teste das fases.
 
 ```text
 snake-game/
-│
-├── assets/
-│   ├── backgrounds/
-│   │   └── .gitkeep
-│   ├── food/
-│   │   └── .gitkeep
-│   ├── obstacles/
-│   │   └── .gitkeep
-│   └── snake/
-│       └── .gitkeep
-│
-├── src/
-│   ├── App.tsx
-│   ├── index.css
-│   └── main.tsx
-│
-├── .env.example
-├── .gitignore
-├── index.html
-├── metadata.json
-├── package-lock.json
-├── package.json
-├── README.md
-├── script.js
-├── style.css
-├── tsconfig.json
-└── vite.config.ts
+|-- .gitignore
+|-- index.html
+|-- LICENSE
+|-- metadata.json
+|-- package-lock.json
+|-- package.json
+|-- README.md
+|-- script.js
+|-- style.css
+|-- tsconfig.json
+`-- vite.config.ts
 ```
 
 ---

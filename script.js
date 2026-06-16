@@ -583,6 +583,8 @@ function playButtonSound() {
 }
 
 // --- ELEMENTOS DOM REVESTIDOS ---
+const appContainer = document.getElementById('app-container');
+const gameArena = document.getElementById('game-arena');
 const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d');
 
@@ -639,6 +641,71 @@ const ctrlUp = document.getElementById('ctrl-up');
 const ctrlDown = document.getElementById('ctrl-down');
 const ctrlLeft = document.getElementById('ctrl-left');
 const ctrlRight = document.getElementById('ctrl-right');
+
+let mobileLayoutFrameId = null;
+
+function getVisibleViewportSize() {
+  const viewport = window.visualViewport;
+  return {
+    width: viewport?.width || window.innerWidth || document.documentElement.clientWidth,
+    height: viewport?.height || window.innerHeight || document.documentElement.clientHeight
+  };
+}
+
+function syncMobilePortraitLayout() {
+  const { width, height } = getVisibleViewportSize();
+  const root = document.documentElement;
+  root.style.setProperty('--app-height', `${Math.floor(height)}px`);
+
+  const isPortrait = height >= width;
+  const isPortableWidth = width <= 1366;
+  const isTouchLayout = window.matchMedia('(pointer: coarse)').matches || width <= 767;
+
+  if (!appContainer || !gameArena || !isPortrait || !isPortableWidth || !isTouchLayout) {
+    root.style.removeProperty('--game-board-size');
+    return;
+  }
+
+  const bodyStyles = window.getComputedStyle(document.body);
+  const containerStyles = window.getComputedStyle(appContainer);
+  const parsePx = (value) => Number.parseFloat(value) || 0;
+  const parseGap = (value) => {
+    const numericValue = Number.parseFloat(value);
+    return Number.isFinite(numericValue) ? numericValue : null;
+  };
+  const bodyVerticalPadding = parsePx(bodyStyles.paddingTop) + parsePx(bodyStyles.paddingBottom);
+  const bodyHorizontalPadding = parsePx(bodyStyles.paddingLeft) + parsePx(bodyStyles.paddingRight);
+  const visibleChildren = Array.from(appContainer.children).filter((element) => {
+    const styles = window.getComputedStyle(element);
+    return styles.display !== 'none' && styles.visibility !== 'hidden';
+  });
+
+  const gap = parseGap(containerStyles.rowGap) ?? parsePx(containerStyles.gap);
+  const gapsHeight = Math.max(0, visibleChildren.length - 1) * gap;
+  const fixedHeight = visibleChildren.reduce((total, element) => {
+    if (element === gameArena) return total;
+    return total + element.getBoundingClientRect().height;
+  }, 0);
+  const availableHeight = height - bodyVerticalPadding - fixedHeight - gapsHeight - 12;
+  const availableWidth = Math.min(
+    appContainer.getBoundingClientRect().width || width - bodyHorizontalPadding,
+    width - bodyHorizontalPadding
+  );
+  const boardSize = Math.floor(Math.max(120, Math.min(availableWidth, availableHeight)));
+
+  root.style.setProperty('--game-board-size', `${boardSize}px`);
+}
+
+function queueMobilePortraitLayoutSync() {
+  if (mobileLayoutFrameId) {
+    cancelAnimationFrame(mobileLayoutFrameId);
+  }
+
+  mobileLayoutFrameId = requestAnimationFrame(() => {
+    mobileLayoutFrameId = null;
+    syncMobilePortraitLayout();
+  });
+}
 
 // --- INICIALIZADOR DE NAVEGAÇÃO E EVENTOS ---
 
@@ -973,6 +1040,8 @@ function updateOverlaysVisibility() {
     if (gameActions) gameActions.classList.add('hidden-by-state');
     if (touchDpad) touchDpad.classList.add('hidden-by-state');
   }
+
+  queueMobilePortraitLayoutSync();
 }
 
 function transitionTo(newState) {
@@ -1873,11 +1942,11 @@ function formatNumber(num) {
 // --- CONTROLE DE ORIENTAÇÃO PARA DISPOSITIVOS MÓVEIS ---
 
 function checkOrientation() {
-  const isTouchDevice = window.matchMedia('(pointer: coarse)').matches;
+  const isTouchDevice = window.matchMedia('(pointer: coarse)').matches || window.matchMedia('(any-pointer: coarse)').matches;
   const isLandscape = window.innerWidth > window.innerHeight;
 
   // Bloqueamos apenas em aparelhos touch de até 1366px de largura (mobile, tablets e iPads no modo horizontal)
-  const shouldBlock = isTouchDevice && isLandscape && window.innerWidth <= 1366;
+  const shouldBlock = isTouchDevice && isLandscape;
 
   if (shouldBlock && !orientationBlocked) {
     // Salva o estado atual antes de bloquear para poder retornar ao mesmo ponto
@@ -1931,12 +2000,26 @@ function checkOrientation() {
 document.addEventListener('DOMContentLoaded', () => {
   loadHighScore();
   setupEventHandlers();
+  const handleViewportChange = () => {
+    checkOrientation();
+    queueMobilePortraitLayoutSync();
+  };
   
   // Registra eventos de redimensionamento e rotação
-  window.addEventListener('resize', checkOrientation);
-  window.addEventListener('orientationchange', checkOrientation);
+  window.addEventListener('resize', handleViewportChange);
+  window.addEventListener('orientationchange', handleViewportChange);
+
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', handleViewportChange);
+    window.visualViewport.addEventListener('scroll', queueMobilePortraitLayoutSync);
+  }
+
+  if (document.fonts?.ready) {
+    document.fonts.ready.then(queueMobilePortraitLayoutSync);
+  }
   
   checkOrientation(); // Checagem inicial
+  queueMobilePortraitLayoutSync();
   
   transitionTo(STATES.WELCOME);
   renderCanvas();
