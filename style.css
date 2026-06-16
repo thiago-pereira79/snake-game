@@ -19,6 +19,7 @@
   --transition-fast: 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   --app-height: 100dvh;
   --game-board-size: min(100%, 480px);
+  --menu-panel-height: var(--game-board-size);
 }
 
 * {
@@ -749,6 +750,133 @@ body {
   .game-controls-bar,
   .mobile-controls {
     flex: 0 0 auto;
+  }
+
+  .game-container.state-welcome .canvas-wrapper,
+  .game-container.state-level-select .canvas-wrapper,
+  .game-container.state-gameover .canvas-wrapper {
+    aspect-ratio: auto;
+    width: 100%;
+    height: var(--menu-panel-height);
+    max-height: var(--menu-panel-height);
+  }
+
+  .game-container.state-welcome .screen-overlay,
+  .game-container.state-level-select .screen-overlay,
+  .game-container.state-gameover .screen-overlay {
+    padding: clamp(28px, 7vw, 44px) clamp(22px, 6vw, 38px);
+  }
+
+  .game-container.state-welcome .menu-content {
+    max-width: min(330px, 100%);
+    padding: 0;
+  }
+
+  .game-container.state-welcome .menu-title {
+    font-size: clamp(2rem, 9vw, 2.75rem);
+    margin-bottom: clamp(18px, 3.2vh, 30px) !important;
+  }
+
+  .game-container.state-welcome .menu-subtitle {
+    font-size: clamp(0.98rem, 4vw, 1.16rem);
+    margin-bottom: clamp(38px, 6vh, 58px) !important;
+  }
+
+  .game-container.state-welcome .menu-actions {
+    max-width: min(360px, 100%);
+  }
+
+  .game-container.state-welcome .menu-action-group:first-child {
+    margin-bottom: clamp(30px, 5vh, 46px);
+  }
+
+  .game-container.state-welcome .menu-helper-text {
+    font-size: clamp(0.76rem, 3.2vw, 0.92rem);
+    margin-top: clamp(12px, 2vh, 18px);
+  }
+
+  .game-container.state-welcome .btn-primary,
+  .game-container.state-welcome .btn-secondary {
+    min-height: clamp(50px, 8vh, 62px);
+  }
+
+  .game-container.state-level-select .selector-screen {
+    justify-content: flex-start;
+    padding-top: clamp(40px, 8vh, 72px);
+    padding-bottom: clamp(26px, 5vh, 42px);
+  }
+
+  .game-container.state-level-select .screen-overlay h2 {
+    font-size: clamp(2.15rem, 9.5vw, 3.15rem);
+    margin-bottom: clamp(18px, 3vh, 28px);
+  }
+
+  .game-container.state-level-select .screen-overlay p {
+    font-size: clamp(0.92rem, 3.8vw, 1.08rem);
+    margin-bottom: clamp(26px, 4.5vh, 38px) !important;
+    max-width: 360px;
+  }
+
+  .game-container.state-level-select .levels-container-scroll {
+    max-height: max(190px, calc(var(--menu-panel-height) - 220px));
+    width: min(100%, 450px);
+    padding-right: 0;
+  }
+
+  .game-container.state-level-select .level-grid {
+    gap: clamp(10px, 2.2vw, 14px);
+  }
+
+  .game-container.state-level-select .level-card {
+    min-height: clamp(92px, 14vh, 122px);
+  }
+
+  .game-container.state-level-select #btn-back-to-menu-overlay {
+    min-height: 52px;
+    min-width: min(220px, 78%);
+  }
+
+  .game-container.state-gameover .game-over-screen {
+    justify-content: center;
+  }
+
+  .game-container.state-gameover .game-over-screen h2 {
+    font-size: clamp(2.45rem, 10vw, 3.35rem);
+    margin-bottom: clamp(20px, 3.4vh, 34px);
+  }
+
+  .game-container.state-gameover .game-over-screen p {
+    font-size: clamp(1rem, 4.2vw, 1.18rem);
+    margin-bottom: clamp(28px, 4.8vh, 46px);
+    max-width: 340px;
+  }
+
+  .game-container.state-gameover .summary-stats {
+    width: min(340px, 90%);
+    padding: clamp(14px, 3.2vh, 22px) clamp(24px, 6vw, 34px);
+    margin-bottom: clamp(38px, 6.5vh, 62px);
+    border-radius: 16px;
+    gap: 8px;
+  }
+
+  .game-container.state-gameover .summary-row {
+    font-size: clamp(0.95rem, 4vw, 1.12rem);
+  }
+
+  .game-container.state-gameover .gameover-actions-stack {
+    max-width: min(360px, 90%) !important;
+    gap: 12px !important;
+    margin-top: 0 !important;
+  }
+
+  .game-container.state-gameover #btn-restart {
+    min-height: clamp(60px, 9vh, 72px);
+    border-radius: 999px;
+  }
+
+  .game-container.state-gameover #btn-gameover-menu {
+    min-height: 52px;
+    border-radius: 14px;
   }
 }
 

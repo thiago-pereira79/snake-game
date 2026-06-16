@@ -663,6 +663,7 @@ function syncMobilePortraitLayout() {
 
   if (!appContainer || !gameArena || !isPortrait || !isPortableWidth || !isTouchLayout) {
     root.style.removeProperty('--game-board-size');
+    root.style.removeProperty('--menu-panel-height');
     return;
   }
 
@@ -692,8 +693,15 @@ function syncMobilePortraitLayout() {
     width - bodyHorizontalPadding
   );
   const boardSize = Math.floor(Math.max(120, Math.min(availableWidth, availableHeight)));
+  const isExpandedPanelState = appContainer.classList.contains('state-welcome') ||
+    appContainer.classList.contains('state-level-select') ||
+    appContainer.classList.contains('state-gameover');
+  const targetPanelHeight = isExpandedPanelState
+    ? Math.floor(Math.max(boardSize, Math.min(availableHeight, availableWidth * 1.42)))
+    : boardSize;
 
   root.style.setProperty('--game-board-size', `${boardSize}px`);
+  root.style.setProperty('--menu-panel-height', `${targetPanelHeight}px`);
 }
 
 function queueMobilePortraitLayoutSync() {
