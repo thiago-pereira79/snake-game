@@ -334,6 +334,106 @@ body {
   font-size: 0.7rem;
 }
 
+/* Desktop / notebook layout: instructions beside the game */
+@media (min-width: 1025px) and (hover: hover) and (pointer: fine) {
+  body {
+    min-height: 100vh;
+    justify-content: center;
+    padding: clamp(24px, 4vw, 56px);
+  }
+
+  .game-container {
+    max-width: min(1040px, calc(100vw - 48px));
+    display: grid;
+    grid-template-columns: minmax(280px, 360px) 480px;
+    grid-template-areas:
+      "instructions header"
+      "instructions status"
+      "instructions arena"
+      "instructions actions";
+    column-gap: clamp(44px, 7vw, 112px);
+    row-gap: 16px;
+    align-items: center;
+  }
+
+  .game-header {
+    grid-area: header;
+  }
+
+  .level-status-bar {
+    grid-area: status;
+  }
+
+  .canvas-wrapper {
+    grid-area: arena;
+  }
+
+  .game-controls-bar {
+    grid-area: actions;
+  }
+
+  .instructions-box {
+    grid-area: instructions;
+    align-self: center;
+    width: 100%;
+    max-width: 360px;
+    padding: 28px;
+    text-align: left;
+    font-size: 0.92rem;
+    line-height: 1.75;
+    border: 1px solid rgba(16, 185, 129, 0.16);
+    border-radius: 16px;
+    box-shadow: var(--shadow-premium), 0 0 24px rgba(16, 185, 129, 0.08);
+  }
+
+  .instructions-box::before {
+    content: "Como jogar";
+    display: block;
+    margin-bottom: 16px;
+    color: var(--color-primary);
+    font-size: 0.76rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    text-shadow: 0 0 8px var(--color-primary-glow);
+  }
+
+  .instructions-box .keys {
+    vertical-align: middle;
+  }
+
+  .instructions-box .key-cap {
+    padding: 2px 7px;
+    font-size: 0.78rem;
+  }
+}
+
+@media (min-width: 1025px) and (hover: hover) and (pointer: fine) and (max-height: 820px) {
+  body {
+    padding-top: 16px;
+    padding-bottom: 16px;
+  }
+
+  .game-container {
+    row-gap: 10px;
+  }
+
+  .game-header {
+    padding-top: 14px;
+    padding-bottom: 14px;
+  }
+
+  .level-status-bar {
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+
+  .btn-secondary {
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+}
+
 /* Mobile Virtual Controller */
 .mobile-controls {
   display: none;
@@ -400,6 +500,7 @@ body {
 .status-segment {
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .status-lbl {
@@ -416,11 +517,40 @@ body {
   color: var(--color-text-main);
 }
 
+#phase-title {
+  display: block;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .status-val-highlight {
   font-size: 0.8rem;
   font-weight: 700;
   color: var(--color-primary);
   text-shadow: 0 0 5px var(--color-primary-glow);
+}
+
+.wall-rule-hud {
+  white-space: nowrap;
+}
+
+.wall-rule-hud.wall-free {
+  color: #10b981;
+}
+
+.wall-rule-hud.wall-lateral {
+  color: #38bdf8;
+}
+
+.wall-rule-hud.wall-vertical {
+  color: #a855f7;
+}
+
+.wall-rule-hud.wall-solid {
+  color: #f43f5e;
+  text-shadow: 0 0 6px rgba(244, 63, 94, 0.35);
 }
 
 .status-val-highlight-orange {
@@ -628,6 +758,39 @@ body {
   border-radius: 999px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+}
+
+.wall-rule-tag {
+  max-width: calc(100% - 8px);
+  margin-top: 5px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  font-size: 0.47rem;
+  font-weight: 800;
+  letter-spacing: 0.035em;
+  line-height: 1.1;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background-color: rgba(15, 23, 42, 0.72);
+}
+
+.wall-rule-tag.wall-free {
+  color: #10b981;
+}
+
+.wall-rule-tag.wall-lateral {
+  color: #38bdf8;
+}
+
+.wall-rule-tag.wall-vertical {
+  color: #a855f7;
+}
+
+.wall-rule-tag.wall-solid {
+  color: #f43f5e;
 }
 
 .level-diff.fácil {
@@ -918,8 +1081,22 @@ body {
     font-size: 0.72rem;
   }
 
+  #phase-title {
+    max-width: clamp(72px, 28vw, 120px);
+  }
+
+  .wall-rule-hud {
+    font-size: 0.62rem;
+  }
+
   .status-val-highlight-orange {
     font-size: 0.78rem;
+  }
+
+  .wall-rule-tag {
+    font-size: 0.43rem;
+    padding: 2px 5px;
+    max-width: calc(100% - 6px);
   }
 
   .btn-secondary {

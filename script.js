@@ -7,6 +7,17 @@
 const GRID_SIZE = 20; // Grade de tamanho 20x20
 const LOGICAL_SIZE = 400; // Tamanho virtual do Canvas
 const CELL_SIZE = LOGICAL_SIZE / GRID_SIZE; // Cada célula possui 20px de tamanho lógico
+const LEVEL_BASE_SPEEDS = [
+  180, 172, 164, 156, 148,
+  140, 134, 128, 122, 116,
+  110, 105, 100, 95, 90,
+  86, 82, 78, 74, 70
+];
+const FOOD_ACCELERATION_EVERY = 5;
+const FOOD_ACCELERATION_STEP = 2;
+const MAX_FOOD_ACCELERATION = 16;
+const MIN_SAFE_MOVE_INTERVAL = 64;
+const ENERGY_BOOST_MULTIPLIER = 0.7;
 
 // --- ESTADOS DE JOGO ---
 const STATES = {
@@ -26,34 +37,34 @@ let gameState = STATES.WELCOME;
 const levels = [
   // Fases 1 a 5 — Tema: Clássico Neon (Fácil, sem obstáculos)
   { 
-    id: 1, name: "Neon Startup", theme: "Clássico Neon", target: 10, speed: 210, difficulty: "Fácil",
+    id: 1, name: "Neon Startup", theme: "Clássico Neon", target: 10, speed: 180, difficulty: "Fácil",
     initialLength: 3, obstacles: [], allowedFoods: ["normal"], wallsBehavior: "solid",
     colors: { bg: "#090d16", grid: "#10b981", snakeHead: "#10b981", snakeBody: "#047857", obstacle: "#f59e0b", food: "#f43f5e" }
   },
   { 
-    id: 2, name: "Neon Glow", theme: "Clássico Neon", target: 12, speed: 200, difficulty: "Fácil",
+    id: 2, name: "Neon Glow", theme: "Clássico Neon", target: 12, speed: 172, difficulty: "Fácil",
     initialLength: 3, obstacles: [], allowedFoods: ["normal"], wallsBehavior: "solid",
     colors: { bg: "#090d16", grid: "#10b981", snakeHead: "#10b981", snakeBody: "#047857", obstacle: "#f59e0b", food: "#f43f5e" }
   },
   { 
-    id: 3, name: "Grid Explorer", theme: "Clássico Neon", target: 14, speed: 190, difficulty: "Fácil",
+    id: 3, name: "Grid Explorer", theme: "Clássico Neon", target: 14, speed: 164, difficulty: "Fácil",
     initialLength: 3, obstacles: [], allowedFoods: ["normal"], wallsBehavior: "wrap", // Borda infinita de exemplo!
     colors: { bg: "#090d16", grid: "#10b981", snakeHead: "#10b981", snakeBody: "#047857", obstacle: "#f59e0b", food: "#f43f5e" }
   },
   { 
-    id: 4, name: "Digital Pathway", theme: "Clássico Neon", target: 16, speed: 180, difficulty: "Fácil",
+    id: 4, name: "Digital Pathway", theme: "Clássico Neon", target: 16, speed: 156, difficulty: "Fácil",
     initialLength: 3, obstacles: [], allowedFoods: ["normal"], wallsBehavior: "solid",
     colors: { bg: "#090d16", grid: "#10b981", snakeHead: "#10b981", snakeBody: "#047857", obstacle: "#f59e0b", food: "#f43f5e" }
   },
   { 
-    id: 5, name: "Luzes de Safira", theme: "Clássico Neon", target: 18, speed: 170, difficulty: "Fácil",
+    id: 5, name: "Luzes de Safira", theme: "Clássico Neon", target: 18, speed: 148, difficulty: "Fácil",
     initialLength: 3, obstacles: [], allowedFoods: ["normal"], wallsBehavior: "wrap", // Borda infinita de exemplo!
     colors: { bg: "#090d16", grid: "#10b981", snakeHead: "#10b981", snakeBody: "#047857", obstacle: "#f59e0b", food: "#f43f5e" }
   },
 
   // Fases 6 a 10 — Tema: Labirinto Âmbar (Médio, obstáculos fixos, cobra verde/azul, comida contraste)
   { 
-    id: 6, name: "Colunas de Neon", theme: "Labirinto Âmbar", target: 18, speed: 175, difficulty: "Médio",
+    id: 6, name: "Colunas de Neon", theme: "Labirinto Âmbar", target: 18, speed: 140, difficulty: "Médio",
     initialLength: 4, allowedFoods: ["normal"], wallsBehavior: "solid",
     colors: { bg: "#110d05", grid: "#f59e0b", snakeHead: "#0ea5e9", snakeBody: "#0284c7", obstacle: "#f59e0b", food: "#ec4899" },
     obstacles: [
@@ -62,7 +73,7 @@ const levels = [
     ]
   },
   { 
-    id: 7, name: "Fortaleza Quad", theme: "Labirinto Âmbar", target: 20, speed: 165, difficulty: "Médio",
+    id: 7, name: "Fortaleza Quad", theme: "Labirinto Âmbar", target: 20, speed: 134, difficulty: "Médio",
     initialLength: 4, allowedFoods: ["normal"], wallsBehavior: "solid",
     colors: { bg: "#110d05", grid: "#f59e0b", snakeHead: "#0ea5e9", snakeBody: "#0284c7", obstacle: "#f59e0b", food: "#ec4899" },
     obstacles: [
@@ -73,7 +84,7 @@ const levels = [
     ]
   },
   { 
-    id: 8, name: "Trilhos Horizontais", theme: "Labirinto Âmbar", target: 22, speed: 155, difficulty: "Médio",
+    id: 8, name: "Trilhos Horizontais", theme: "Labirinto Âmbar", target: 22, speed: 128, difficulty: "Médio",
     initialLength: 4, allowedFoods: ["normal"], wallsBehavior: "solid",
     colors: { bg: "#110d05", grid: "#f59e0b", snakeHead: "#0ea5e9", snakeBody: "#0284c7", obstacle: "#f59e0b", food: "#ec4899" },
     obstacles: [
@@ -82,7 +93,7 @@ const levels = [
     ]
   },
   { 
-    id: 9, name: "Lados Opostos", theme: "Labirinto Âmbar", target: 24, speed: 145, difficulty: "Médio",
+    id: 9, name: "Lados Opostos", theme: "Labirinto Âmbar", target: 24, speed: 122, difficulty: "Médio",
     initialLength: 4, allowedFoods: ["normal"], wallsBehavior: "solid",
     colors: { bg: "#110d05", grid: "#f59e0b", snakeHead: "#0ea5e9", snakeBody: "#0284c7", obstacle: "#f59e0b", food: "#ec4899" },
     obstacles: [
@@ -91,7 +102,7 @@ const levels = [
     ]
   },
   { 
-    id: 10, name: "Muralha de Berlim", theme: "Labirinto Âmbar", target: 26, speed: 135, difficulty: "Médio",
+    id: 10, name: "Muralha de Berlim", theme: "Labirinto Âmbar", target: 26, speed: 116, difficulty: "Médio",
     initialLength: 4, allowedFoods: ["normal"], wallsBehavior: "solid",
     colors: { bg: "#110d05", grid: "#f59e0b", snakeHead: "#0ea5e9", snakeBody: "#0284c7", obstacle: "#f59e0b", food: "#ec4899" },
     obstacles: [
@@ -103,7 +114,7 @@ const levels = [
 
   // Fases 11 a 15 — Tema: Dimensão Energia (Difícil, comidas especiais + cyberpunk palette, cobra 4 pçs)
   { 
-    id: 11, name: "Núcleo Reverso", theme: "Dimensão Energia", target: 24, speed: 150, difficulty: "Difícil",
+    id: 11, name: "Núcleo Reverso", theme: "Dimensão Energia", target: 24, speed: 110, difficulty: "Difícil",
     initialLength: 5, allowedFoods: ["normal", "golden", "energy", "reduction"], wallsBehavior: "wrap", // Borda infinita para diversão reclinada
     colors: { bg: "#0d0b1f", grid: "#8b5cf6", snakeHead: "#06b6d4", snakeBody: "#0891b2", obstacle: "#ec4899", food: "#f43f5e" },
     obstacles: [
@@ -111,7 +122,7 @@ const levels = [
     ]
   },
   { 
-    id: 12, name: "Isolamento Externo", theme: "Dimensão Energia", target: 26, speed: 140, difficulty: "Difícil",
+    id: 12, name: "Isolamento Externo", theme: "Dimensão Energia", target: 26, speed: 105, difficulty: "Difícil",
     initialLength: 5, allowedFoods: ["normal", "golden", "energy", "reduction"], wallsBehavior: "solid",
     colors: { bg: "#0d0b1f", grid: "#8b5cf6", snakeHead: "#06b6d4", snakeBody: "#0891b2", obstacle: "#ec4899", food: "#f43f5e" },
     obstacles: [
@@ -120,7 +131,7 @@ const levels = [
     ]
   },
   { 
-    id: 13, name: "Zig Zag Neon", theme: "Dimensão Energia", target: 28, speed: 130, difficulty: "Difícil",
+    id: 13, name: "Zig Zag Neon", theme: "Dimensão Energia", target: 28, speed: 100, difficulty: "Difícil",
     initialLength: 5, allowedFoods: ["normal", "golden", "energy", "reduction"], wallsBehavior: "solid",
     colors: { bg: "#0d0b1f", grid: "#8b5cf6", snakeHead: "#06b6d4", snakeBody: "#0891b2", obstacle: "#ec4899", food: "#f43f5e" },
     obstacles: [
@@ -130,7 +141,7 @@ const levels = [
     ]
   },
   { 
-    id: 14, name: "Relógio Biológico", theme: "Dimensão Energia", target: 30, speed: 120, difficulty: "Difícil",
+    id: 14, name: "Relógio Biológico", theme: "Dimensão Energia", target: 30, speed: 95, difficulty: "Difícil",
     initialLength: 5, allowedFoods: ["normal", "golden", "energy", "reduction"], wallsBehavior: "solid",
     colors: { bg: "#0d0b1f", grid: "#8b5cf6", snakeHead: "#06b6d4", snakeBody: "#0891b2", obstacle: "#ec4899", food: "#f43f5e" },
     obstacles: [
@@ -139,7 +150,7 @@ const levels = [
     ]
   },
   { 
-    id: 15, name: "Arena Estelar", theme: "Dimensão Energia", target: 32, speed: 110, difficulty: "Difícil",
+    id: 15, name: "Arena Estelar", theme: "Dimensão Energia", target: 32, speed: 90, difficulty: "Difícil",
     initialLength: 5, allowedFoods: ["normal", "golden", "energy", "reduction"], wallsBehavior: "solid",
     colors: { bg: "#0d0b1f", grid: "#8b5cf6", snakeHead: "#06b6d4", snakeBody: "#0891b2", obstacle: "#ec4899", food: "#f43f5e" },
     obstacles: [
@@ -150,7 +161,7 @@ const levels = [
 
   // Fases 16 a 20 — Tema: Caos Controlado (Extremo, mais velozes, cobra 5 pçs)
   { 
-    id: 16, name: "Canal do Meio", theme: "Caos Controlado", target: 30, speed: 125, difficulty: "Extremo",
+    id: 16, name: "Canal do Meio", theme: "Caos Controlado", target: 30, speed: 86, difficulty: "Extremo",
     initialLength: 6, allowedFoods: ["normal"], wallsBehavior: "solid",
     colors: { bg: "#180505", grid: "#ef4444", snakeHead: "#22c55e", snakeBody: "#16a34a", obstacle: "#ef4444", food: "#fbbf24" },
     obstacles: [
@@ -159,7 +170,7 @@ const levels = [
     ]
   },
   { 
-    id: 17, name: "Labirinto Interno", theme: "Caos Controlado", target: 32, speed: 115, difficulty: "Extremo",
+    id: 17, name: "Labirinto Interno", theme: "Caos Controlado", target: 32, speed: 82, difficulty: "Extremo",
     initialLength: 6, allowedFoods: ["normal"], wallsBehavior: "solid",
     colors: { bg: "#180505", grid: "#ef4444", snakeHead: "#22c55e", snakeBody: "#16a34a", obstacle: "#ef4444", food: "#fbbf24" },
     obstacles: [
@@ -168,7 +179,7 @@ const levels = [
     ]
   },
   { 
-    id: 18, name: "Paredes Trincadas", theme: "Caos Controlado", target: 34, speed: 105, difficulty: "Extremo",
+    id: 18, name: "Paredes Trincadas", theme: "Caos Controlado", target: 34, speed: 78, difficulty: "Extremo",
     initialLength: 6, allowedFoods: ["normal"], wallsBehavior: "solid",
     colors: { bg: "#180505", grid: "#ef4444", snakeHead: "#22c55e", snakeBody: "#16a34a", obstacle: "#ef4444", food: "#fbbf24" },
     obstacles: [
@@ -179,7 +190,7 @@ const levels = [
     ]
   },
   { 
-    id: 19, name: "Barreiras Esparsas", theme: "Caos Controlado", target: 36, speed: 95, difficulty: "Extremo",
+    id: 19, name: "Barreiras Esparsas", theme: "Caos Controlado", target: 36, speed: 74, difficulty: "Extremo",
     initialLength: 6, allowedFoods: ["normal"], wallsBehavior: "solid",
     colors: { bg: "#180505", grid: "#ef4444", snakeHead: "#22c55e", snakeBody: "#16a34a", obstacle: "#ef4444", food: "#fbbf24" },
     obstacles: [
@@ -190,7 +201,7 @@ const levels = [
     ]
   },
   { 
-    id: 20, name: "O Desafio Supremo", theme: "Caos Controlado", target: 40, speed: 90, difficulty: "Extremo",
+    id: 20, name: "O Desafio Supremo", theme: "Caos Controlado", target: 40, speed: 70, difficulty: "Extremo",
     initialLength: 6, allowedFoods: ["normal"], wallsBehavior: "solid",
     colors: { bg: "#180505", grid: "#ef4444", snakeHead: "#22c55e", snakeBody: "#16a34a", obstacle: "#ef4444", food: "#fbbf24" },
     obstacles: [
@@ -290,6 +301,73 @@ function getCurrentTheme(lvl) {
   return themeConfig[currentLvl.theme] || themeConfig["Clássico Neon"];
 }
 
+function getLevelBaseSpeed(lvl) {
+  const levelId = lvl?.id || 1;
+  const configuredSpeed = lvl?.speed;
+  const fallbackSpeed = LEVEL_BASE_SPEEDS[levelId - 1] || LEVEL_BASE_SPEEDS[0];
+  return Number.isFinite(configuredSpeed) ? configuredSpeed : fallbackSpeed;
+}
+
+function getFoodAcceleration() {
+  const accelerationSteps = Math.floor(levelFoodsEaten / FOOD_ACCELERATION_EVERY);
+  return Math.min(accelerationSteps * FOOD_ACCELERATION_STEP, MAX_FOOD_ACCELERATION);
+}
+
+function getCurrentMoveInterval() {
+  const acceleratedSpeed = baseGameSpeed - getFoodAcceleration();
+  return Math.max(acceleratedSpeed, MIN_SAFE_MOVE_INTERVAL);
+}
+
+function getWallRule(lvl) {
+  const behavior = lvl?.wallsBehavior || 'solid';
+
+  if (behavior === 'wrap') {
+    return {
+      key: 'free',
+      cardLabel: 'BORDA LIVRE',
+      hudLabel: 'LIVRES',
+      description: 'Atravessa todas as bordas',
+      className: 'wall-free',
+      wrapsX: true,
+      wrapsY: true
+    };
+  }
+
+  if (behavior === 'wrap-x' || behavior === 'lateral') {
+    return {
+      key: 'lateral',
+      cardLabel: 'PORTAL LATERAL',
+      hudLabel: 'LATERAIS',
+      description: 'Atravessa esquerda e direita',
+      className: 'wall-lateral',
+      wrapsX: true,
+      wrapsY: false
+    };
+  }
+
+  if (behavior === 'wrap-y' || behavior === 'vertical') {
+    return {
+      key: 'vertical',
+      cardLabel: 'PORTAL VERTICAL',
+      hudLabel: 'VERTICAIS',
+      description: 'Atravessa cima e baixo',
+      className: 'wall-vertical',
+      wrapsX: false,
+      wrapsY: true
+    };
+  }
+
+  return {
+    key: 'solid',
+    cardLabel: 'PAREDE SOLIDA',
+    hudLabel: 'FECHADAS',
+    description: 'Bateu na borda, perdeu',
+    className: 'wall-solid',
+    wrapsX: false,
+    wrapsY: false
+  };
+}
+
 // --- VARIÁVEIS SENSORIAIS E ESTADUAIS DO JOGO ---
 let currentLevelIndex = 0; // Fase carregada (0 a 19)
 let isCampaignMode = true; // Define se está progredindo (true) ou jogando nível isolado (false)
@@ -306,7 +384,7 @@ let levelFoodsEaten = 0; // Quantidade de comidas colhidas na fase corrente
 let highScore = 0;
 
 // Temporizadores e buffs especiais
-let baseGameSpeed = 120; // Velocidade definida da fase
+let baseGameSpeed = LEVEL_BASE_SPEEDS[0]; // Velocidade base definida pela fase atual
 let speedBoostTimer = 0; // Buff de supervelocidade restante (frames de jogo)
 let reductionSplashTimer = 0; // Efeito estético de reduzir tamanho
 
@@ -607,6 +685,7 @@ const finalHighScoreEl = document.getElementById('final-high-score');
 const gameStatusBar = document.getElementById('game-status-bar');
 const modeBadge = document.getElementById('mode-badge');
 const phaseTitle = document.getElementById('phase-title');
+const wallRuleBadge = document.getElementById('wall-rule-badge');
 const targetProgress = document.getElementById('target-progress');
 
 // Telas de Overlays Integradas
@@ -887,11 +966,13 @@ function startGameLoop() {
 }
 
 function getActiveLogicInterval() {
+  const currentInterval = getCurrentMoveInterval();
+
   if (speedBoostTimer > 0) {
-    return Math.max(45, Math.floor(baseGameSpeed * 0.55));
+    return Math.max(MIN_SAFE_MOVE_INTERVAL, Math.floor(currentInterval * ENERGY_BOOST_MULTIPLIER));
   }
 
-  return baseGameSpeed;
+  return currentInterval;
 }
 
 function refreshActiveLevelCache() {
@@ -1024,6 +1105,7 @@ function buildLevelGrid() {
     
     // Configura o conteúdo interno dinâmico
     const formattedNum = lvl.id < 10 ? `0${lvl.id}` : lvl.id;
+    const wallRule = getWallRule(lvl);
     card.innerHTML = `
       <span class="level-num">${formattedNum}</span>
       <div class="level-info">
@@ -1031,6 +1113,7 @@ function buildLevelGrid() {
         <span class="level-theme" style="color: ${getCurrentTheme(lvl).snakeHeadColor || '#10b981'}; opacity: 0.95;">${lvl.theme}</span>
       </div>
       <span class="level-diff ${lvl.difficulty.toLowerCase()}">${lvl.difficulty}</span>
+      <span class="wall-rule-tag ${wallRule.className}" title="${wallRule.description}">${wallRule.cardLabel}</span>
     `;
 
     // Clicar inicia diretamente a fase correspondente no modo isolado (avulso)
@@ -1296,6 +1379,12 @@ function loadCurrentLevel() {
   modeBadge.textContent = isCampaignMode ? "CAMPANHA" : "AVULSO";
   modeBadge.className = isCampaignMode ? "status-val-highlight" : "status-val-highlight-orange";
   phaseTitle.textContent = `FASE ${lvl.id < 10 ? '0' + lvl.id : lvl.id}: ${lvl.name}`;
+  const wallRule = getWallRule(lvl);
+  if (wallRuleBadge) {
+    wallRuleBadge.textContent = wallRule.hudLabel;
+    wallRuleBadge.className = `status-val-highlight wall-rule-hud ${wallRule.className}`;
+    wallRuleBadge.title = wallRule.description;
+  }
   
   levelFoodsEaten = 0;
   updateTargetProgressDisplay();
@@ -1339,7 +1428,7 @@ function loadCurrentLevel() {
   direction = { x: dir.x, y: dir.y };
   nextDirection = { x: dir.x, y: dir.y };
 
-  baseGameSpeed = lvl.speed;
+  baseGameSpeed = getLevelBaseSpeed(lvl);
   speedBoostTimer = 0;
   reductionSplashTimer = 0;
 
@@ -1500,11 +1589,21 @@ function gameLogicStep() {
   };
 
   // 1. Colisão ou Transposição das Paredes do Tabuleiro
-  if (newHead.x < 0 || newHead.x >= GRID_SIZE || newHead.y < 0 || newHead.y >= GRID_SIZE) {
-    if (lvl && lvl.wallsBehavior === 'wrap') {
+  const wallRule = getWallRule(lvl);
+  const isOutX = newHead.x < 0 || newHead.x >= GRID_SIZE;
+  const isOutY = newHead.y < 0 || newHead.y >= GRID_SIZE;
+
+  if (isOutX || isOutY) {
+    if (isOutX && wallRule.wrapsX) {
       newHead.x = (newHead.x + GRID_SIZE) % GRID_SIZE;
+    } else if (isOutX) {
+      transitionTo(STATES.GAMEOVER);
+      return;
+    }
+
+    if (isOutY && wallRule.wrapsY) {
       newHead.y = (newHead.y + GRID_SIZE) % GRID_SIZE;
-    } else {
+    } else if (isOutY) {
       transitionTo(STATES.GAMEOVER);
       return;
     }
@@ -1718,6 +1817,7 @@ function renderCanvas() {
 
   // 2. Desenha a grade virtual discreta de navegação
   drawGrid();
+  drawBoardEdges();
 
   if (gameState === STATES.PLAYING || gameState === STATES.PAUSED) {
     // 3. Desenha obstáculos estáticos da fase se houver
@@ -1768,8 +1868,57 @@ function drawGrid() {
   ctx.restore();
 }
 
+// Desenha a dica visual das bordas: solida quando mata, tracejada quando atravessa.
+function drawBoardEdges() {
+  const wallRule = getWallRule(activeLevel);
+  const theme = activeTheme;
+  const portalColor = theme.snakeHeadColor || '#10b981';
+  const dangerColor = theme.obstacleColor || '#f43f5e';
+
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.lineWidth = 3;
+
+  drawBoardEdge('top', wallRule.wrapsY, portalColor, dangerColor);
+  drawBoardEdge('right', wallRule.wrapsX, portalColor, dangerColor);
+  drawBoardEdge('bottom', wallRule.wrapsY, portalColor, dangerColor);
+  drawBoardEdge('left', wallRule.wrapsX, portalColor, dangerColor);
+
+  ctx.restore();
+}
+
+function drawBoardEdge(side, isPortal, portalColor, dangerColor) {
+  const inset = 2;
+  const max = LOGICAL_SIZE - inset;
+  const color = isPortal ? portalColor : dangerColor;
+
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.shadowColor = color;
+  ctx.shadowBlur = isPortal ? 9 : 5;
+  ctx.globalAlpha = isPortal ? 0.85 : 0.55;
+  ctx.setLineDash(isPortal ? [8, 8] : []);
+
+  ctx.beginPath();
+  if (side === 'top') {
+    ctx.moveTo(inset, inset);
+    ctx.lineTo(max, inset);
+  } else if (side === 'right') {
+    ctx.moveTo(max, inset);
+    ctx.lineTo(max, max);
+  } else if (side === 'bottom') {
+    ctx.moveTo(max, max);
+    ctx.lineTo(inset, max);
+  } else {
+    ctx.moveTo(inset, max);
+    ctx.lineTo(inset, inset);
+  }
+  ctx.stroke();
+  ctx.restore();
+}
+
 /**
- * Desenha todos os blocos de obstáculos cadastrados na fase atual.
+ * Desenha todos os blocos de obstaculos cadastrados na fase atual.
  */
 function drawObstacles() {
   const lvl = activeLevel;
